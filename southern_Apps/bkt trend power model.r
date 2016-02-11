@@ -1,6 +1,6 @@
 model{
   
-  # Abundance model
+  # Abundance model  
   
   for(i in 1:nSites){
     for(j in 1:nYears){

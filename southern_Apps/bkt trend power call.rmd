@@ -5,7 +5,7 @@ date: "January 29, 2016"
 output: html_document
 ---
 
-# 02/12/2016
+# 02/11/2016
 # Power analysis for detecting a temporal trend in regional brook trout abundance
 # Fit a model to southern Apps data compiled by THan Hitt
 ==================================================================================
