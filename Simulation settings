@@ -15,3 +15,4 @@ Matrix of simulations for task assignment
   simMat$person <- NA
 
 Number of simulations per setting: 250 or 500???
+
