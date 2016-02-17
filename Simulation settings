@@ -14,5 +14,5 @@ Matrix of simulations for task assignment
   names(simMat) <- c("nSites","nYears","perAnnualDecline")
   simMat$person <- NA
 
-Number of simulations per setting: 250 or 500???
+Number of simulations per setting: 100
 
