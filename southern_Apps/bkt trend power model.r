@@ -5,7 +5,7 @@ model{
   for(i in 1:nSites){
     for(j in 1:nYears){
       N[i,j] ~ dpois(lambda[i,j])
-      log(lambda[i,j]) <- mu + (trend + slope.ran[i])*(j-1) + site.ran[i] + year.ran[j] + eps[i,j]
+      log(lambda[i,j]) <- mu + (trend + slope.ran[i])*(j-1) + site.ran[i] + year.ran[j] + eps[i,j] + log(siteLength[i,j])
     }
   }
   
