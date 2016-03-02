@@ -1,91 +1,28 @@
 ---
-title: "bkt power null model"
+title: "bkt power sim1"
 author: "yk"
-date: "January 12, 2016"
+date: "March 1, 2016"
 output: html_document
----
 
-# 01/12/2016
+
+# 03/01/2016
 # Power analysis for detecting a temporal trend in regional brook trout abundance
-# Null model that contains only spatial and temporal random effects 
+# First simulations  
 ==================================================================================
-
-# practice
 
 ## working directory & libraries
 ```{r working directory & libraries, warning=FALSE, message=FALSE}
-setwd("G:/Clemson/Research/Projects/bkt working group/sampling design/analysis/sim 01")
+setwd("D:/Kanno/bkt_sample_design/sim1")
 getwd()
 library(reshape2); library(rjags); library(plyr); library(ggplot2)
 library(knitr); library(arm); library(boot)
 load.module("glm")
 ```
 
-## Preliminary check of simulation settings
-```{r Simulation settings}
-## Number of sites and years to survey
-nSites <- 50
-nYears <- 20
-nPasses <- 3
-
-## Data generation
-N <- lambda <- p <- array(NA, dim=c(nSites, nYears),
-                    dimnames=list(paste("site",1:nSites),paste("year",1:nYears)))
-
-y <- array(NA, dim=c(nSites, nYears, nPasses),
-           dimnames=list(paste("site",1:nSites),paste("year",1:nYears),
-                         paste("pass",1:nPasses)))
-
-## Parameters for population abundance - needs to be updated with emperical data
-mu = 4            # overall mean abundance at a site on a log scale
-r = -0.05         # annual rate of population decrease (e.g. 5% decrease) 
-trend = log(1+r)  # convert to log scale for linear model
-sd.site = 0.6    
-site.ran = rnorm(nSites, 0, sd.site)    # variation among sites
-sd.year = 0.5
-year.ran = rnorm(nYears, 0, sd.year)    # variation among years 
-noise = 0.2
-eps = array(rnorm(nSites*nYears, 0, noise), dim=c(nSites,nYears))  # over-dispersion
-
-## Parameters for detection - needs to be updated with emperical data
-p.mean = 0.6     # mean detection prob
-p.mu = log(p.mean/(1-p.mean))   # convert to logit scale
-p.b = 0.2        # effect size of a cov that affects detection
-p.X = array(rnorm(nSites*nYears, 0, 1), dim=c(nSites,nYears)) # standardized cov
-p.noise = 0.05
-p.eps = array(rnorm(nSites*nYears, 0, p.noise), dim=c(nSites,nYears))  # over-dispersion
-
-## Simulated data in a site-by-year format  
-for(i in 1:nSites){
-  for(j in 1:nYears){
-    # abundance
-    lambda[i,j] <- exp(mu + trend*(j-1) + site.ran[i] + year.ran[j] + eps[i,j])
-    N[i,j] <- rpois(1,lambda[i,j])
-    
-    # detection
-    p[i,j] <- plogis(p.mu + p.b*p.X[i,j] + p.eps[i,j])
-    y[i,j,1] <- rbinom(1, N[i,j], p[i,j])
-    y[i,j,2] <- rbinom(1, N[i,j]-y[i,j,1], p[i,j])
-    y[i,j,3] <- rbinom(1, N[i,j]-y[i,j,1]-y[i,j,2], p[i,j])
-  }
-}
+## read in model output based on analysis of adult fish in southern range
+```{r read in output}
+load("bkt trend power out.RData")
 ```
-
-## Graph a simulated count data above
-```{r graph a simulated data}
-count <- adply(y, c(1,2), sum)  # sum across passes
-names(count) <- c("siteID","yearID","bktCount")
-count$site <- substr(count$siteID, 6,7)
-count$year <- substr(count$yearID, 6,7)
-
-str(count)
-count$bktCount <- as.numeric(count$bktCount)
-count$year <- as.numeric(count$year)
-
-ggplot(count, aes(x=year, y=bktCount, group=site)) +
-  geom_line() + geom_point(shape=1,size=3) 
-```
-
 
              #########################
              ## Running Simulations ##
@@ -94,136 +31,153 @@ ggplot(count, aes(x=year, y=bktCount, group=site)) +
 ## Running simulations
 ```{r Running simulations}
 #----------
-## Number of sites and years to survey
-nSites <- 50
-nYears <- 20
-nSims <- 30
+## Simulation settings
+nSims <- 2
+nPasses <- 3
 
-## Data generation
-N <- lambda <- p <- array(NA, dim=c(nSites, nYears),
-                          dimnames=list(paste("site",1:nSites),paste("year",1:nYears)))
+for(nSites in c(50,100,200)){   # number of sites
+  for(nYears in c(5,10,20)){    # number of years
+    for(r in c(-0.01,-0.025,-0.05)){   # percent annual decline (1%, 2.5%, 5%)
+      for (s in 1:nSims){   # number of simulations
+      ## Data generation
+      N <- lambda <- p <- array(NA, dim=c(nSites, nYears),
+                                dimnames=list(paste("site",1:nSites), 
+                                              paste("year",1:nYears)))
 
-y <- array(NA, dim=c(nSites, nYears, nPasses),
-           dimnames=list(paste("site",1:nSites),paste("year",1:nYears),
-                         paste("pass",1:nPasses)))
+      y <- array(NA, dim=c(nSites, nYears, nPasses),
+                 dimnames=list(paste("site",1:nSites),
+                               paste("year",1:nYears),
+                               paste("pass",1:nPasses)))      
+      
+      ## Parameters for population abundance
+      ## Grab a set of params from MCMC samples
+      out.new = as.matrix(out)
+      chainLength = dim(out.new)[1]
+      # i = sample(1:nrow(out.new), 1)
+      i = seq(1, chainLength, floor(chainLength/nSims))
+      
+      mu = out.new[i[s],"mu"]             # overall mean abundance at a site on a log scale
+      sd.site = out.new[i[s],"sd.site"]   # variation among sites
+      sd.year = out.new[i[s],"sd.year"]   # variation among years 
+      sd.slope = out.new[i[s],"sd.slope"] # variation in trend among sites
+      sigma = out.new[i[s],"sigma"]        # over-dispersion
+      #r = -0.05         # annual rate of population decrease (e.g. 5% decrease) 
+      trend = log(1+r)   # convert to log scale for linear model: Dauwalter et al. (2010)
 
-## Parameters for population abundance - needs to be updated with emperical data
-mu = 4            # overall mean abundance at a site on a log scale
-r = -0.05         # annual rate of population decrease (e.g. 5% decrease) 
-trend = log(1+r)  # convert to log scale for linear model: Dauwalter et al. (2010)
-sd.site = 0.8     # variation among sites
-sd.year = 0.5     # variation among years 
-sigma = 0.2       # over-dispersion
+      ## Parameters for detection
+      p.mean = out.new[i[s],"p.mean"]    # mean detection prob
+      p.mu = log(p.mean/(1-p.mean))   # convert to logit scale
+      p.b = out.new[i[s],"p.b"]          # effect size of a det cov (day of year)
+      p.sigma = out.new[i[s],"p.sigma"]  # variation among sites
 
-## Parameters for detection - needs to be updated with emperical data
-p.mean = 0.6     # mean detection prob
-p.mu = log(p.mean/(1-p.mean))   # convert to logit scale
-p.b = 0.2        # effect size of a cov that affects detection
-p.sigma = 0.05
+      ### save true values - list alphabetically
+      truePars <- c(mu=mu, p.b=p.b, p.mean=p.mean, p.sigma=p.sigma, sd.site=sd.site, 
+                    sd.slope=sd.slope, sd.year=sd.year, sigma=sigma, trend=trend)
 
-### save true values - list alphabetically
-truePars <- c(mu=mu, p.b=p.b, p.mean=p.mean, p.sigma=p.sigma, sd.site=sd.site, 
-              sd.year=sd.year, sigma=sigma, trend=trend)
+      #--------------------------------------------------------------------
+      ## JAGS set up
 
-#--------------------------------------------------------------------
-## JAGS set up
+      # parameters to save
+      pars.to.save <- c("mu","trend","sd.site","sd.slope","sd.year","sigma",
+                        "p.mean","p.b","p.sigma")
 
-# parameters to save
-pars.to.save <- c("mu","trend","sd.site","sd.year","sigma",
-                  "p.mean","p.b","p.sigma")
+      init.vals <- function() list(mu=runif(1,0,10), 
+                                   N=array(1000, dim=c(nSites, nYears)),
+                                   sd.slope=runif(1,0,5), sd.site=runif(1,0,5),
+                                   sd.year=runif(1,0,5), sigma=runif(1,0,5),
+                                   p.mean=runif(1,0,1), p.b=rnorm(1))
+      
+      # model name
+      model = "bkt trend power model.r"
 
-# initial values
-init.vals <- function() list(N=array(1000, dim=c(nSites, nYears)),
-                             p.mean=runif(1,0.5,1), p.b=runif(1,-0.5,0.5),
-                             p.sigma=runif(1,0,1))
+      # some MCMC settings
+      n.chains = 3  		# number of chains
+      n.adapt = 30000		# number of burnin
+      n.iter = 10000	  # number of iterations
+      thin = 5				  # number to thin by
+      
+      #--------------------------------------------------------------------
+      ## run the simulations
+      set.seed(123)
 
-# model name
-model = "bkt trend power null model.r"
-
-# some MCMC settings
-n.chains = 3  		# number of chains
-n.adapt = 10000		# number of burnin
-n.iter = 5000	    # number of iterations
-thin = 10				  # number to thin by
-
-#--------------------------------------------------------------------
-## run the simulations
-set.seed(123)
-
-# create array to capture results
-  res = array(NA, dim=c(nSims, length(truePars), 5), 
-              dimnames=list(1:nSims, names(truePars), 
-              c('Mean', '2.5%', 'Median', '97.5%', 'SD')))
+      # create array to capture results
+        res = array(NA, dim=c(nSims, length(truePars), 9), 
+                    dimnames=list(1:nSims, names(truePars), 
+                    c('Mean','2.5%','7.5%','12.5%','Median','87.5%','92.5%','97.5%','SD')))
+                    ## alpha = 0.95, 0.85, 0.75
   
-# create list to save posteriors
-  models = vector('list', nSims)
+      # create list to save posteriors
+        models = vector('list', nSims)
   
-# create array to check convergence  
-  gelmanR = array(NA, dim=c(nSims, length(truePars)),
-                  dimnames=list(1:nSims, names(truePars)))
+      # create array to check convergence  
+        gelmanR = array(NA, dim=c(nSims, length(truePars)),
+                        dimnames=list(1:nSims, names(truePars)))
 
+         
+      ## stochastic factors affecting abundance
+      site.ran = rnorm(nSites, 0, sd.site)    # variation among sites
+      year.ran = rnorm(nYears, 0, sd.year)    # variation among years
+      slope.ran = rnorm(nSites, 0, sd.slope)  # variation in trend among sites
+      eps = array(rnorm(nSites*nYears, 0, sigma), dim=c(nSites,nYears))  # over-dispersion
   
-for (s in 1:nSims){  
+      ## stochastic factors affecting detection
+      sampday = array(rnorm(nSites*nYears, 0, 1), dim=c(nSites,nYears)) # standardized cov
+      p.eps = array(rnorm(nSites*nYears, 0, p.sigma), dim=c(nSites,nYears))  # over-d
     
-    ## stochastic factors affecting abundance
-    site.ran = rnorm(nSites, 0, sd.site)    # variation among sites
-    year.ran = rnorm(nYears, 0, sd.year)    # variation among years
-    eps = array(rnorm(nSites*nYears, 0, noise), dim=c(nSites,nYears))  # over-dispersion
-  
-    ## stochastic factors affecting detection
-    p.X = array(rnorm(nSites*nYears, 0, 1), dim=c(nSites,nYears)) # standardized cov
-    p.eps = array(rnorm(nSites*nYears, 0, p.noise), dim=c(nSites,nYears))  # over-dispersion
-    
-    ## Simulated data in a site-by-year format     
-    for(i in 1:nSites){
-      for(j in 1:nYears){
-        # abundance
-          lambda[i,j] <- exp(mu + trend*(j-1) + site.ran[i] + year.ran[j] + eps[i,j])
-          N[i,j] <- rpois(1,lambda[i,j])
-        # observed count  
-          p[i,j] <- plogis(p.mu + p.b*p.X[i,j] + p.eps[i,j])
-          y[i,j,1] <- rbinom(1, N[i,j], p[i,j])
-          y[i,j,2] <- rbinom(1, N[i,j]-y[i,j,1], p[i,j])
-          y[i,j,3] <- rbinom(1, N[i,j]-y[i,j,1]-y[i,j,2], p[i,j])
-      }
-    }
+      ## Simulated data in a site-by-year format     
+        for(i in 1:nSites){
+          for(j in 1:nYears){
+          # abundance
+            lambda[i,j] <- exp(mu + (trend + slope.ran[i])*(j-1) + 
+                               site.ran[i] + year.ran[j] + eps[i,j])
+            N[i,j] <- rpois(1,lambda[i,j])
+          # observed count  
+            p[i,j] <- plogis(p.mu + p.b*sampday[i,j] + p.eps[i,j])
+            y[i,j,1] <- rbinom(1, N[i,j], p[i,j])
+            y[i,j,2] <- rbinom(1, N[i,j]-y[i,j,1], p[i,j])
+            y[i,j,3] <- rbinom(1, N[i,j]-y[i,j,1]-y[i,j,2], p[i,j])
+          }
+        }
 
-#--------------------------------------------------------------------
-## Bundle data
-jags.data <- list(nSites=nSites, nYears=nYears, p.X=p.X, y=y)
+      #--------------------------------------------------------------------
+      ## Bundle data
+      jags.data <- list(nSites=nSites, nYears=nYears, sampday=sampday, y=y)
     
-cat(paste('Simulation', s, '\n'))
+      cat(paste('nSites=',nSites,'nYears=',nYears,'r=',r,'Simulation',s,'\n'))
         
-#--------------------------------------------------------------------
-## Run using rjags
-dm.mod = jags.model(file=model, data=jags.data, inits=init.vals, 
-                    n.chains=n.chains, n.adapt=n.adapt)
+      #--------------------------------------------------------------------
+      ## Run using rjags
+      dm.mod = jags.model(file=model, data=jags.data, inits=init.vals, 
+                          n.chains=n.chains, n.adapt=n.adapt)
 
-dm.mcmc = coda.samples(dm.mod, variable.names=pars.to.save, n.iter=n.iter, thin=thin)
+      dm.mcmc = coda.samples(dm.mod, variable.names=pars.to.save, n.iter=n.iter, thin=thin)
 
-dm.gelman = gelman.diag(dm.mcmc)$psrf[,1]
+      dm.gelman = gelman.diag(dm.mcmc)$psrf[,1]
 
-cat(paste('Model', s, 'fit \n'))
-
-## save posterior samples
-models[[s]][[1]] = jags.data
-models[[s]][[2]] = dm.mcmc
+      ## save posterior samples
+      models[[s]][[1]] = jags.data
+      models[[s]][[2]] = dm.mcmc
     
-summ = summary(dm.mcmc)$statistics
-quan = summary(dm.mcmc)$quantile
+      summ = summary(dm.mcmc)$statistics
+      quan = summary(dm.mcmc, quantile=c(0.025,0.075,0.125,0.5,0.875,0.925,0.975))$quantile
 
-res[s,,1] = summ[,1]
-res[s,,2] = quan[,'2.5%']
-res[s,,3] = quan[,'50%']
-res[s,,4] = quan[,'97.5%']
-res[s,,5] = summ[,2]
+      res[s,,1] = summ[,1]
+      res[s,,2] = quan[,'2.5%']
+      res[s,,3] = quan[,'7.5%']
+      res[s,,4] = quan[,'12.5%']
+      res[s,,5] = quan[,'50%']
+      res[s,,6] = quan[,'87.5%']
+      res[s,,7] = quan[,'92.5%']
+      res[s,,8] = quan[,'97.5%']
+      res[s,,9] = summ[,2]
 
-gelmanR[s,] = gelman.diag(dm.mcmc)$psrf[,1]
+      gelmanR[s,] = gelman.diag(dm.mcmc)$psrf[,1]
 
-save(res, truePars, file=paste0('res','.Rdata'))
-save(models, truePars, file=paste0('models','_MCMC.Rdata'))
-save(gelmanR, truePars, file=paste0('gelmanR','.Rdata'))
+      save(res, truePars, file=paste0('res','nSites',nSites,'nYears',nYears,'r',r,'.Rdata'))
+      save(models, truePars, file=paste0('models','nSites',nSites,'nYears',nYears,'r',r,'_MCMC.Rdata'))
+      save(gelmanR, truePars, file=paste0('gelmanR','nSites',nSites,'nYears',nYears,'r',r,'.Rdata'))
+      } 
+    }
+  }
 }
 ```
-
-
