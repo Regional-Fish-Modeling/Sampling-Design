@@ -1,0 +1,18 @@
+Response variables
+  adult (total (sum of YOY and adult) and YOY may be pursued later)
+
+Range of CI for defining statistical significance: 
+  95%, 85% and 75%
+
+Settings to vary in simulations
+  nSites <- c(50, 100, 200)
+  nYears <- c(5, 10, 20)
+  annualDec <- c(1.0, 2.5, 5.0)
+  
+Matrix of simulations for task assignment
+  simMat <- expand.grid(nSites, nYears, annualDec)
+  names(simMat) <- c("nSites","nYears","perAnnualDecline")
+  simMat$person <- NA
+
+Number of simulations per setting: 100
+
