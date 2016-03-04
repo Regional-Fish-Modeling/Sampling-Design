@@ -41,23 +41,25 @@ nPasses <- 3
 pars.to.save <- c("mu","trend","sd.site","sd.slope","sd.year","sigma",
                   "p.mean","p.b","p.sigma")
 
-# create array to capture results
-  res = array(NA, dim=c(nSims, length(pars.to.save), 9), 
-              dimnames=list(1:nSims, pars.to.save, 
-              c('Mean','2.5%','7.5%','12.5%','Median','87.5%','92.5%','97.5%','SD')))
-              ## alpha = 0.95, 0.85, 0.75
-
-# create list to save posteriors
-  models = vector('list', nSims)
-
-# create array to check convergence  
-  gelmanR = array(NA, dim=c(nSims, length(pars.to.save)),
-                  dimnames=list(1:nSims, pars.to.save))
-
-
 for(nSites in c(50,100,200)){   # number of sites
   for(nYears in c(5,10,20)){    # number of years
     for(r in c(-0.01,-0.025,-0.05)){   # percent annual decline (1%, 2.5%, 5%)
+    
+      # create array to capture results
+        res = array(NA, dim=c(nSims, length(pars.to.save), 9), 
+                    dimnames=list(1:nSims, pars.to.save, 
+                    c('Mean','2.5%','7.5%','12.5%','Median','87.5%','92.5%','97.5%','SD')))
+      
+      # create list to save posteriors
+        models = vector('list', nSims)
+      
+      # create array to check convergence  
+        gelmanR = array(NA, dim=c(nSims, length(pars.to.save)),
+                        dimnames=list(1:nSims, pars.to.save))
+                        
+        truePars = array(NA,dim=c(nSims,length(pars.to.save)),
+                        dimnames=list(1:nSims,pars.to.save))
+#run simulations
       for (s in 1:nSims){   # number of simulations
       ## Data generation
       N <- lambda <- p <- array(NA, dim=c(nSites, nYears),
@@ -73,8 +75,7 @@ for(nSites in c(50,100,200)){   # number of sites
       ## Grab a set of params from MCMC samples
       out.new = as.matrix(out)
       chainLength = dim(out.new)[1]
-      # i = sample(1:nrow(out.new), 1)
-      i = seq(1, chainLength, floor(chainLength/nSims))
+      i = sample(1:nrow(out.new), 1)
       
       mu = out.new[i[s],"mu"]             # overall mean abundance at a site on a log scale
       sd.site = out.new[i[s],"sd.site"]   # variation among sites
@@ -90,9 +91,8 @@ for(nSites in c(50,100,200)){   # number of sites
       p.b = out.new[i[s],"p.b"]          # effect size of a det cov (day of year)
       p.sigma = out.new[i[s],"p.sigma"]  # variation among sites
 
-      ### save true values - list alphabetically
-      truePars <- c(mu=mu, p.b=p.b, p.mean=p.mean, p.sigma=p.sigma, sd.site=sd.site, 
-                    sd.slope=sd.slope, sd.year=sd.year, sigma=sigma, trend=trend)
+      ### save true values - grabbed using names in pars.to.save
+      truePars[s,] <- sapply(pars.to.save,get)
 
       #--------------------------------------------------------------------
       ## JAGS set up
@@ -179,12 +179,13 @@ for(nSites in c(50,100,200)){   # number of sites
       gelmanR[s,] = dm.mcmc$summary[1:length(pars.to.save),
                                     which(dimnames(dm.mcmc$summary)[[2]]=="Rhat")]
 
-      save(res, truePars, file=paste0(outDir,'/res','nSites',nSites,'nYears',nYears,'r',r,'.Rdata'))
+      saveRDS(res, file=paste0(outDir,'/res','nSites',nSites,'nYears',nYears,'r',r,'.Rdata'))
       save(models, truePars, file=paste0(outDir,'/models','nSites',nSites,'nYears',nYears,'r',r,'_MCMC.Rdata'))
       save(gelmanR, truePars, file=paste0(outDir,'/gelmanR','nSites',nSites,'nYears',nYears,'r',r,'.Rdata'))
       } 
     }
   }
+  cat(nsites," ",nYears," ",r," done at ",Sys.time())
 }
 endTime<-Sys.time()
 cat("simulations took ",endTime-startTime)

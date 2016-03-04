@@ -15,4 +15,9 @@ vignettes/*.pdf
 
 *.RData
 .RData
+*.rdata
+*.rData
 *.csv
+
+#model output folders
+simTest/*
