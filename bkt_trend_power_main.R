@@ -1,7 +1,7 @@
 ## working directory & libraries
 
 # setwd("D:/Kanno/bkt_sample_design/sim1")
-outDir<-"simTest"
+outDir<-"simTest2"
 getwd()
 library(reshape2); library(jagsUI); library(plyr); library(ggplot2)
 library(knitr); library(arm); library(boot)
@@ -16,7 +16,7 @@ load("bkt trend power out.rdata")
 
 ## Simulation settings
 startTime<-Sys.time()
-nSims <- 1
+nSims <- 10
 nPasses <- 3
 
 # parameters to save
@@ -28,15 +28,15 @@ model = "bkt trend power model.r"
 
 # some MCMC settings
 n.chains = 3  		# number of chains
-n.adapt = 1000		# number of sampler tuning iterations
-n.burnin = 1 # number of iterations to discard
-n.iter = 25000	  # total iterations
+n.adapt = 5000		# number of sampler tuning iterations
+n.burnin = 33000 # number of iterations to discard
+n.iter = 35000	  # total iterations
 thin = 1				  # number to thin by
 
 #loop through settings
-for(nSites in c(50,100,200)){   # number of sites
-  for(nYears in c(5,10,20)){    # number of years
-    for(r in c(-0.01,-0.025,-0.05)){   # percent annual decline (1%, 2.5%, 5%)
+for(nSites in c(50)){   # number of sites
+  for(nYears in c(20)){    # number of years
+    for(r in c(-0.025)){   # percent annual decline (1%, 2.5%, 5%)
       
       # create array to capture results
       res = array(NA, dim=c(nSims, length(pars.to.save), 9), 

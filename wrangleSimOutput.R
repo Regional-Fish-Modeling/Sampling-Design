@@ -1,5 +1,6 @@
+require(dplyr)
 #combine results from the simulations to get single data.frames of gelman and 
-resultsDir<-"simTest"
+resultsDir<-"simTest2"
 files<-list.files(resultsDir)
 resultsFiles<-files[grep("res",files)]
 gelmanFiles<-files[grep("gelman",files)]
@@ -25,7 +26,7 @@ getGelman<-function(files){
                     as.numeric()
   output[[fileNum]]<-result
   }
-  output<-rbind.fill(output)
+  output<-bind_rows(output) %>% data.frame()
   return(output)
 }
 
