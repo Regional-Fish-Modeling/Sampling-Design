@@ -34,11 +34,14 @@ n.iter = 62000	  # total iterations
 
 thin = 1				  # number to thin by
 results<-NULL#create empty results to bind real results into
-
+it<-1
 #loop through settings
 for(nSites in c(50,100,150)){   # number of sites
   for(nYears in c(5,10,20)){    # number of years
     for(r in c(-0.01,-0.025,-0.05)){   # percent annual decline (1%, 2.5%, 5%)
+      #give an update of progress
+      cat("starting model ",it," of 27")
+      it<-it+1
       quantsToSave<-c(0.025,0.05,0.075,0.1,0.125,0.5,0.875,0.9,0.925,0.95,0.975)
       
       resultCols<-c('parameter','Mean',paste0("q",quantsToSave*100),'SD','rHat',
@@ -154,3 +157,4 @@ for(nSites in c(50,100,150)){   # number of sites
 }
 #save to output folder
 saveRDS(results, file=paste0("~/output/sim",simNum,'.rds'))
+cat("simNum: ",simNum) 
