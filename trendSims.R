@@ -1,28 +1,22 @@
-## working directory & libraries
-# setwd("D:/Kanno/bkt_sample_design/sim1")
-# outDir<-"simTest2"
-getwd()
-list.of.packages <- c("jagsUI","dplyr")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
+#This runs a single iteration of the simulations and is meant to be called from trendSims.slurm
 
+## working directory & libraries
+#using home directory instead of setting explicitly ("~/")
 library(jagsUI); library(dplyr)
 
 ## read in model output based on analysis of adult fish in southern range
 load("trendData.rdata")
 
-
 #########################
 ## Running Simulations ##
 #########################   
-#simNum<-runif(1,0,1)
+
+#grab the simulation number from the environment passed from the slurm call
 simNum<- Sys.getenv('SLURM_ARRAY_TASK_ID') %>% as.numeric()
-#simNum<-commandArgs(TRUE)
-#simNum<-simNum[1]
+
+#set random seed based on simNum because all iterations were returning identical results
 set.seed(simNum)
 ## Simulation settings
-# startTime<-Sys.time()
-# nSims <- 10
 nPasses <- 3
 
 # parameters to save
@@ -38,29 +32,23 @@ n.adapt = 5000		# number of sampler tuning iterations
 n.burnin = 60000 # number of iterations to discard
 n.iter = 62000	  # total iterations
 
-n.adapt=1
-n.burnin=2
-n.iter=4
-
 thin = 1				  # number to thin by
-results<-NULL
+results<-NULL#create empty results to bind real results into
+
 #loop through settings
-for(nSites in c(50)){   # number of sites
-  for(nYears in c(5)){    # number of years
-    for(r in c(-0.01)){   # percent annual decline (1%, 2.5%, 5%)
+for(nSites in c(50,100,150)){   # number of sites
+  for(nYears in c(5,10,20)){    # number of years
+    for(r in c(-0.01,-0.025,-0.05)){   # percent annual decline (1%, 2.5%, 5%)
       quantsToSave<-c(0.025,0.05,0.075,0.1,0.125,0.5,0.875,0.9,0.925,0.95,0.975)
       
       resultCols<-c('parameter','Mean',paste0("q",quantsToSave*100),'SD','rHat',
                     'trueValue')
       
-      
       res = array(NA,dim=c(length(pars.to.save),length(resultCols))) %>%
         data.frame()
       names(res)<-resultCols
       res$parameter<-pars.to.save
-      # 
-      # #loop through simulations
-      # for (s in 1:nSims){   # number of simulations
+      
       ## Data generation
       N <- lambda <- p <- array(NA_real_, dim=c(nSites, nYears),
                                 dimnames=list(paste("site",1:nSites), 
@@ -105,7 +93,6 @@ for(nSites in c(50)){   # number of sites
       
       #--------------------------------------------------------------------
       ## run the simulations
-      #set.seed(123)
       
       ## stochastic factors affecting abundance
       site.ran = rnorm(nSites, 0, sd.site)    # variation among sites
@@ -136,18 +123,18 @@ for(nSites in c(50)){   # number of sites
       ## Bundle data
       jags.data <- list(nSites=nSites, nYears=nYears, sampday=sampday, y=y)
       
-      # cat(paste('nSites=',nSites,'nYears=',nYears,'r=',r,'Simulation',s," started ",Sys.time(),'\n'))
-      # 
       #--------------------------------------------------------------------
+      
       ## Run using jags::jagsUI in parallel
       dm.mcmc=jags(data=jags.data,inits=init.vals,parameters.to.save=pars.to.save,model.file=model,
                    n.iter=n.iter,n.thin=thin,n.chains=n.chains,n.adapt=n.adapt,n.burnin=n.burnin,
                    parallel=T)
       
-      ## save posterior samples
+      ## save posterior samples NOT SAVING FULL CHAINS
       # models[[s]][[1]] = jags.data
       # models[[s]][[2]] = dm.mcmc$samples
       
+      #save the results summary and simulation info
       summ = summary(dm.mcmc$samples)$statistics
       quan = summary(dm.mcmc$samples, quantile=quantsToSave)$quantile
       res[,paste0("q",quantsToSave*100)]<-quan[dimnames(quan)[[1]]!="deviance",]
@@ -159,11 +146,11 @@ for(nSites in c(50)){   # number of sites
       res$nSites<-nSites
       res$simNum<-simNum
       
+      #bind with previous simulations
       results<-rbind(results,res)
     
     }
   }
 }
-
+#save to output folder
 saveRDS(results, file=paste0("~/output/sim",simNum,'.rds'))
-print(simNum)
