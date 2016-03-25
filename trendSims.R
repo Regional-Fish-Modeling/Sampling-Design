@@ -1,10 +1,12 @@
 ## working directory & libraries
-
 # setwd("D:/Kanno/bkt_sample_design/sim1")
-outDir<-"simTest2"
+# outDir<-"simTest2"
 getwd()
-library(reshape2); library(jagsUI); library(dplyr); library(ggplot2)
-library(knitr); library(arm); library(boot)
+list.of.packages <- c("jagsUI","dplyr")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(jagsUI); library(dplyr)
 
 ## read in model output based on analysis of adult fish in southern range
 load("trendData.rdata")
@@ -13,7 +15,11 @@ load("trendData.rdata")
 #########################
 ## Running Simulations ##
 #########################   
-simNum<-runif(1,0,1)
+#simNum<-runif(1,0,1)
+simNum<- Sys.getenv('SLURM_ARRAY_TASK_ID') %>% as.numeric()
+#simNum<-commandArgs(TRUE)
+#simNum<-simNum[1]
+
 ## Simulation settings
 # startTime<-Sys.time()
 # nSims <- 10
@@ -24,7 +30,7 @@ pars.to.save <- c("mu","trend","sd.site","sd.slope","sd.year","sigma",
                   "p.mean","p.b","p.sigma")
 
 # model name
-model = "trendData.r"
+model = "trendModel.r"
 
 # some MCMC settings
 n.chains = 3  		# number of chains
@@ -39,9 +45,9 @@ n.iter=4
 thin = 1				  # number to thin by
 results<-NULL
 #loop through settings
-for(nSites in c(50,100,150)){   # number of sites
-  for(nYears in c(5,10,20)){    # number of years
-    for(r in c(-0.01,-0.025,-0.05)){   # percent annual decline (1%, 2.5%, 5%)
+for(nSites in c(50)){   # number of sites
+  for(nYears in c(5)){    # number of years
+    for(r in c(-0.01)){   # percent annual decline (1%, 2.5%, 5%)
       quantsToSave<-c(0.025,0.05,0.075,0.1,0.125,0.5,0.875,0.9,0.925,0.95,0.975)
       
       resultCols<-c('parameter','Mean',paste0("q",quantsToSave*100),'SD','rHat',
@@ -154,8 +160,10 @@ for(nSites in c(50,100,150)){   # number of sites
       res$simNum<-simNum
       
       results<-rbind(results,res)
-      saveRDS(res, file=paste0("sim",simNum,'.rds'))
-      
+    
     }
   }
 }
+
+saveRDS(results, file=paste0("~/output/sim",simNum,'.rds'))
+print(simNum)
