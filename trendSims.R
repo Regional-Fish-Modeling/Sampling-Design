@@ -19,7 +19,7 @@ load("trendData.rdata")
 simNum<- Sys.getenv('SLURM_ARRAY_TASK_ID') %>% as.numeric()
 #simNum<-commandArgs(TRUE)
 #simNum<-simNum[1]
-
+set.seed(simNum)
 ## Simulation settings
 # startTime<-Sys.time()
 # nSims <- 10
