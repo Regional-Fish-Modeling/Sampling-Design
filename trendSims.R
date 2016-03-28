@@ -89,7 +89,7 @@ for(nSites in c(50,100,150)){   # number of sites
       ## JAGS set up
       
       init.vals <- function() list(mu=runif(1,0,10), 
-                                   N=array(5000, dim=c(nSites, nYears)),
+                                   N=array(1200, dim=c(nSites, nYears)),
                                    sd.slope=runif(1,0,5), sd.site=runif(1,0,5),
                                    sd.year=runif(1,0,5), sigma=runif(1,0,5),
                                    p.mean=runif(1,0,1), p.b=rnorm(1))
@@ -129,9 +129,26 @@ for(nSites in c(50,100,150)){   # number of sites
       #--------------------------------------------------------------------
       
       ## Run using jags::jagsUI in parallel
+      
+      #trying to balance convergence with high enough N inits to not throw initialization errors
+      # but an error could happen, so using try() to avoid nullifying the whole iteration
+      jagsWorked<-FALSE
+      try(expr={
       dm.mcmc=jags(data=jags.data,inits=init.vals,parameters.to.save=pars.to.save,model.file=model,
                    n.iter=n.iter,n.thin=thin,n.chains=n.chains,n.adapt=n.adapt,n.burnin=n.burnin,
                    parallel=T)
+      jagsWorked<-TRUE
+      })
+      
+      if(!jagsWorked){
+        #if jags throws an error (could happen if initial N values aren't high enough, but should be very rare),
+        #then just save NAs as the result to indicate which models failed
+        res$nYears<-nYears
+        res$nSites<-nSites
+        res$simNum<-simNum
+        results<-rbind(results,res)
+        next
+      }
       
       ## save posterior samples NOT SAVING FULL CHAINS
       # models[[s]][[1]] = jags.data
