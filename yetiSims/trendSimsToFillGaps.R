@@ -54,7 +54,7 @@ for(s in 1:nrow(simControl)){
 #   for(nYears in c(5,10,20)){    # number of years
 #     for(r in c(-0.01,-0.025,-0.05)){   # percent annual decline (1%, 2.5%, 5%)
       #give an update of progress
-      cat("starting model ",i," of ",nrow(simControl))
+      cat("starting model ",s," of ",nrow(simControl))
       quantsToSave<-c(0.025,0.05,0.075,0.1,0.125,0.5,0.875,0.9,0.925,0.95,0.975)
       
       resultCols<-c('parameter','Mean',paste0("q",quantsToSave*100),'SD','rHat',
@@ -158,7 +158,7 @@ for(s in 1:nrow(simControl)){
         #then just save NAs as the result to indicate which models failed
         res$nYears<-nYears
         res$nSites<-nSites
-        res$simNum<-simNum
+        res$simNum<-paste0(simNum,".",s-1)
         results<-rbind(results,res)
         next
       }
@@ -177,7 +177,7 @@ for(s in 1:nrow(simControl)){
       res[,"trueValue"]<-truePars
       res$nYears<-nYears
       res$nSites<-nSites
-      res$simNum<-simNum
+      res$simNum<-paste0(simNum,".",s-1)
       
       #bind with previous simulations
       results<-rbind(results,res)
