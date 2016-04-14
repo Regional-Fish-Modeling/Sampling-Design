@@ -10,7 +10,7 @@ badOnes<-res[parameter=="mu",.(didNotCoverge=sum(!converged[!is.na(converged)])/
 res<-res[!is.na(trueValue)&converged==T]
 
 res[,diffFromTrue:=q2.5>trueValue|q97.5<trueValue]
-propSig<-res[parameter=="trend",.(propSig95=sum(q97.5<0)/length(sigTrend),
+propSig<-res[parameter=="trend",.(propSig95=sum(q97.5<0)/length(q97.5),
                                   propSig90=sum(q95<0)/length(q95),
                                   propSig80=sum(q90<0)/length(q95),
                                   n=.N),by=.(nYears,nSites,trend)]
