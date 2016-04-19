@@ -7,12 +7,12 @@
 #SBATCH -n 1
 #SBATCH -c 3
 #SBATCH -t 7-00:00:00
-#SBATCH --array=1-100
+#SBATCH --array=1-377
 #SBATCH --mail-user=echildress@usgs.gov
-#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-type=BEGIN,END,FAIL
 
 module load jags/4.1.0-intel
 
-Rscript ${SLURM_SUBMIT_DIR}/trendSims.R
+Rscript ${SLURM_SUBMIT_DIR}/trendSimsToFillGaps.R
 
 exit

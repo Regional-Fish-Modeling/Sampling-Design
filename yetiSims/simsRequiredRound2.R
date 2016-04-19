@@ -1,3 +1,6 @@
+library(dplyr)
+library(data.table)
+
 res<-readRDS("yetiSims/trendSimResults1.rds") %>% data.table()
 setkey(res,nYears,nSites,simNum)
 res[,trend:=rep(log(c(-0.01,-0.025,-0.05)+1),each=9)]
@@ -17,3 +20,12 @@ propSig<-res[parameter=="trend",.(propSig95=sum(q97.5<0)/length(q97.5),
 propSig[,didNotConverge:=badOnes$didNotConverge]
 propSig[,numToRun:=ceiling((100-n)/(1-didNotConverge))]
 toRun<-propSig[,.(nYears,nSites,trend,numToRun)]
+
+toRun<-rbind(toRun,data.table(nYears=rep(c(5,10,20),3),
+                              nSites=rep(25,9),
+                              trend=rep(log(c(-0.01,-0.025,-0.05)+1),each=3),
+                              numToRun=rep(120,9)))
+
+toRun<-toRun[rep(1:nrow(toRun),numToRun)]
+toRun[,whichSim:=round((1:nrow(toRun))-5.1,-1)/10+1]
+saveRDS(toRun,"yetiSims/simsToDo.rds")
