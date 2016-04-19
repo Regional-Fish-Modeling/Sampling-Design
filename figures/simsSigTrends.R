@@ -19,7 +19,7 @@ cols=c(rgb(1,0,0,0.7),rgb(0,1,0,0.7),rgb(0,0,1,0.7))
 tiff.par("figures/simsSigTrends.tif",mfrow=c(3,1),height=6,width=3.5)
 plot(propSig95~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/10),data=propSig,
      xlab="true trend",ylab="proportion overlapping 0 (95% CI)")
-legend(-0.015,0.9,c("5","10","20"),col=cols,pch=19,,pt.cex=2,title="Years",bty='n')
+legend(-0.015,0.9,c("5","10","20"),col=cols,pch=19,pt.cex=2,title="Years",bty='n')
 legend(-0.02,0.9,c("50","100","150"),pt.cex=log(c(50,100,150)/10),pch=19,
        col='black',title="Sites",bty='n')
 plot(propSig90~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/10),data=propSig,
