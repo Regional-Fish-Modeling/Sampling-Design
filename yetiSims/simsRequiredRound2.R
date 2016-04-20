@@ -1,3 +1,5 @@
+library(data.table)
+library(dplyr)
 res1<-readRDS("yetiSims/trendSimResults1.rds") %>% 
   data.table() %>%
   setkey(nYears,nSites,simNum) %>%
