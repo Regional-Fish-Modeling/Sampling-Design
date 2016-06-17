@@ -11,7 +11,6 @@ model{
   }
   
   ## priors
-#  mu ~ dunif(0, 5)      # overall intercept
   mu ~ dnorm(0, 0.01)      # overall intercept
   trend ~ dnorm(0, 0.01)   # linear trend
   
@@ -23,7 +22,6 @@ model{
   sd2.site <- pow(sd.site, 2)
   
   for (j in 1:nYears){
-    #year.ran[j] ~ dnorm(0, tau.year)  # Random year effect
     year.ran[j] ~ dnorm(year.hat[j], tau.year)
     year.hat[j] <- b[1]*fallPrcp[j] + b[2]*fallTmean[j] + 
       b[3]*winterPrcp[j] + b[4]*winterTmean[j] +
