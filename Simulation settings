@@ -5,7 +5,7 @@ Range of CI for defining statistical significance:
   95%, 85% and 75%
 
 Settings to vary in simulations
-  nSites <- c(50, 100, 200)
+  nSites <- c(5, 10, 50, 100)
   nYears <- c(5, 10, 20)
   annualDec <- c(1.0, 2.5, 5.0)
   
