@@ -1,0 +1,175 @@
+# 4/6/2016
+# Power analysis for detecting a temporal trend in regional brook trout abundance
+# Fit a model to southern Apps data compiled by Than Hitt
+# Adult count is the response variable
+# Testing why added seasonal weather covariates does not reduce temporal noise
+  
+```{r set-up, warning=FALSE, message=FALSE}
+# working directory & libraries
+setwd("D:/Kanno/bkt_sample_design/southern_Apps/Adult/M05 wo cov")
+getwd()
+library(reshape2); library(rjags); library(plyr); library(ggplot2)
+library(knitr); library(arm); library(boot); library(dplyr); library(jagsUI)
+load.module("glm")
+
+# Read in data from Than's data
+## Trout count data
+load("Data_FishCountAr.rData")
+## Imports pass-specific count data for each site and year
+
+## Detection covriates data
+load("Data_DetectionCovsStd.RData")
+## Imports sampling day-of-year and precip in prior 7 days from DAYMET data (standardized)
+
+## Seasonal weather data 
+load("Data_SeasonalClimateStd.RData")
+
+#Site width for offset
+#read data, make area, and grab columns of interest
+siteLength<-read.csv("BKT_COVS_SAMPLES.csv",stringsAsFactors=F) %>%
+  mutate(siteArea100m2=SiteWidth_m*SiteWidth_m/100) %>%
+  mutate(siteLength100m=SiteLength_m/100) %>%
+  dplyr::select(SiteID,siteArea100m2,siteLength100m,SiteWidth_m,Year) %>%
+  data.frame()
+
+siteLength[siteLength$Year==2105,"Year"]<-2015 #fix typo on year
+
+siteLength<-siteLength %>%
+  right_join(data.frame(SiteID=rep(unique(siteLength$SiteID),each=length(unique(siteLength$Year))),
+                        Year=rep(unique(siteLength$Year),length(unique(siteLength$SiteID))),
+                        stringsAsFactors=F),
+             by=c("SiteID","Year")) %>%
+  dplyr::group_by(SiteID) %>%
+  dplyr::mutate(meanSiteLength100m=mean(siteLength100m,na.rm=T)) %>%
+  ungroup()
+
+#assign the mean by site for unsampled sites (and one sampled, but unmeasured site, with no interannual variability in site length)
+siteLength[is.na(siteLength$siteLength100m),"siteLength100m"]<-
+  siteLength[is.na(siteLength$siteLength100m),"meanSiteLength100m"]
+siteLength<-dplyr::select(siteLength,-meanSiteLength100m)
+
+#make an array, can change b/w area and length here by switching 3rd arugment of select
+siteLength<-siteLength %>%
+  dplyr::select(SiteID,Year,siteLength100m) %>%
+  melt(id.vars=c("SiteID","Year")) %>%
+  acast(SiteID~Year)
+#subset to sites that are in ADUFish
+siteLength<-siteLength[match(dimnames(ADUFish)[[1]],dimnames(siteLength)[[1]]),]
+
+
+## Calculate "regional" mean by year
+RegFallPrcpStd <- apply(FallPrcpStd, 2, mean)
+RegFallTmeanStd <- apply(FallTmeanStd, 2, mean)
+RegWinterPrcpStd <- apply(WinterPrcpStd, 2, mean)
+RegWinterTmeanStd <- apply(WinterTmeanStd, 2, mean)
+RegSpringPrcpStd <- apply(SpringPrcpStd, 2, mean)
+RegSpringTmeanStd <- apply(SpringTmeanStd, 2, mean)
+
+
+# prep for JAGS
+## data structure
+nSites = dim(ADUFish)[1]
+nYears = dim(ADUFish)[2]
+nCovs = 6 # number of seasonal weather covariates
+
+## bundle data - testing YOY abundance
+dat <- list(nSites=nSites, nYears=nYears, y=ADUFish,nCovs=nCovs, 
+            prcp7day=prcp7day.std, sampday=sampday.std,
+            siteLength=siteLength)
+
+# set initial values
+init <- function() list(mu=runif(1,0,5), 
+                        N=array(1000, dim=c(nSites, nYears)),
+                        sd.site=runif(1,0,2), 
+                        sd.year=runif(1,0,2), sigma=runif(1,0,2),
+                        p.mean=runif(1,0.2,0.8), p.b=rnorm(1)) 
+
+# parameters to monitor
+pars <- c("mu","trend","sd.site","sd.year","sigma","p.mean","p.b")
+```
+
+```{r model, eval=FALSE}
+model{
+  
+  # Abundance model  
+  
+  for(i in 1:nSites){
+    for(j in 1:nYears){
+      N[i,j] ~ dpois(lambda[i,j])
+      log(lambda[i,j]) <- mu + trend*(j-1) +
+        site.ran[i] + year.ran[j] + log(siteLength[i,j]) + eps[i,j]
+    }
+  }
+  
+  ## priors
+  mu ~ dnorm(0, 0.01)      # overall intercept
+  trend ~ dnorm(0, 0.01)   # linear trend
+  
+  for(i in 1:nSites){
+    site.ran[i] ~ dnorm(0,tau.site)     # random site effects
+  }
+  tau.site <- pow(sd.site, -2)
+  sd.site ~ dunif(0,2)
+  sd2.site <- pow(sd.site, 2)
+  
+  for (j in 1:nYears){
+    year.ran[j] ~ dnorm(0, tau.year)  # Random year effect
+  }
+  tau.year <- pow(sd.year, -2) 
+  sd.year ~ dunif(0,2)
+  sd2.year <- pow(sd.year, 2)
+  
+  for(i in 1:nSites){
+    for(j in 1:nYears){
+      eps[i,j] ~ dnorm(0, tau)  # Over-dispersion
+    }
+  }
+  tau <- pow(sigma, -2)
+  sigma ~ dunif(0, 2)
+  sigma2 <- pow(sigma, 2)
+
+  
+  # Detection model
+  
+  for(i in 1:nSites){
+    for(j in 1:nYears){
+      y[i,j,1] ~ dbin(p[i,j], N[i,j])
+      y[i,j,2] ~ dbin(p[i,j], N[i,j]-y[i,j,1])
+      y[i,j,3] ~ dbin(p[i,j], N[i,j]-y[i,j,1]-y[i,j,2])
+      
+      p[i,j] <- 1/(1 + exp(-lp.lim[i,j]))
+      lp.lim[i,j] <- min(999, max(-999, lp[i,j]))
+      lp[i,j] <- p.mu + p.b*sampday[i,j] 
+      # removed "prcp7day" for its small effect
+    }
+  }
+  
+  ## priors  
+  p.mean ~ dunif(0.2,0.8)
+  p.mu <- log(p.mean/(1-p.mean))
+  p.b ~ dnorm(0, 0.37)
+}
+```
+
+```{r running JAGS}
+set.seed(23) 
+
+## running with rjags
+#burnin <- jags.model(paste("bkt_trend_power_wo_weather_cov_model.r", sep=""),
+#                           dat, init, n.chains=3, n.adapt=30000)
+
+# mcmc sample
+#out <- coda.samples(burnin, pars, n.iter=30000, thin=10)
+#summary(out)
+#plot(out)
+
+# gelman r value
+
+#library(coda) 
+#gelman.diag(out, multivariate=FALSE)
+
+## parallel run in jagsUI
+out2 <- jags(dat, init, pars, paste("bkt_trend_power_wo_weather_cov_model.r", sep=""),
+            n.chains=3, n.thin=10, n.iter=60000, n.burnin=30000, parallel=TRUE)
+print(out2, dig=3)
+```
