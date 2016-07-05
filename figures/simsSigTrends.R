@@ -28,7 +28,7 @@ tiff.par("figures/simsSigTrendsAdult.tif",mfrow=c(3,1),height=6,width=3.5)
 plot(propSig95~trend,pch=16,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"],
      xlab="true trend",ylab="proportion not overlapping 0 (95% CI)",ylim=c(0,1))
 legend(-0.015,0.9,c("5","10","20"),col=cols,pch=19,pt.cex=2,title="Years",bty='n')
-legend(-0.02,0.9,c("5","10","50","100"),pt.cex=log(c(25,50,100,150)/10),pch=16,
+legend(-0.02,0.9,c("5","10","50","100"),pt.cex=log(c(5,10,50,100)/2),pch=16,
        col='black',title="Sites",bty='n')
 plot(propSig90~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"],
      xlab="true trend",ylab="proportion not overlapping 0 (90% CI)",ylim=c(0,1))
@@ -40,7 +40,7 @@ tiff.par("figures/simsSigTrendsYoy.tif",mfrow=c(3,1),height=6,width=3.5)
 plot(propSig95~trend,pch=16,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"],
      xlab="true trend",ylab="proportion not overlapping 0 (95% CI)",ylim=c(0,1))
 legend(-0.015,0.9,c("5","10","20"),col=cols,pch=19,pt.cex=2,title="Years",bty='n')
-legend(-0.02,0.9,c("5","10","50","100"),pt.cex=log(c(25,50,100,150)/10),pch=16,
+legend(-0.02,0.9,c("5","10","50","100"),pt.cex=log(c(5,10,50,100)/2),pch=16,
        col='black',title="Sites",bty='n')
 plot(propSig90~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"],
      xlab="true trend",ylab="proportion not overlapping 0 (90% CI)",ylim=c(0,1))
