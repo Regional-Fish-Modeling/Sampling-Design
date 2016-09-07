@@ -37,17 +37,23 @@ n.iter = 65000	  # total iterations
 thin = 1				  # number to thin by
 results<-NULL#create empty results to bind real results into
 for(s in 1:nrow(simControl)){
+  
+  #include environmental covariates in simulations and models?
   includeCovs<-simControl$covariates[s]
+  
   # model name
   model = ifelse(includeCovs,"trendModelCov.r","trendModelNoCov.r")
   
-  #load data
+  #load data specific to stage and covariate inclusion
   load(paste0(simControl$stage[s],
               ifelse(includeCovs,"Cov","NoCov"),
               ".RData"))
+  
+  #get simulation settings from control structure
   nYears<-simControl$nYears[s]
   nSites<-simControl$nSites[s]
   r<-exp(simControl$trend[s])-1
+  
   #set random seed based on simNum because all iterations were returning identical results
   set.seed(simNum*s)
 
@@ -59,13 +65,15 @@ for(s in 1:nrow(simControl)){
 
 # parameters to save
       if(includeCovs){
+        #with environmental covariates
 		pars.to.save <- c("mu","trend","sd.site","sd.year","sigma",
                  "p.mean","p.b","b1","b2","b3","b4","b5","b6")
 	} else {
+	  #without environmental covariates
 		pars.to.save <- c("mu","trend","sd.site","sd.year","sigma",
                  "p.mean","p.b")
 	}
-      
+      #set up results structures
       resultCols<-c('parameter','Mean',paste0("q",quantsToSave*100),'SD','rHat',
                     'trueValue')
       
@@ -73,7 +81,9 @@ for(s in 1:nrow(simControl)){
         data.frame()
       names(res)<-resultCols
       res$parameter<-pars.to.save
-      
+    
+      ## Data generation  
+      #generate environment
       if(includeCovs){
         fallPrcp<-rnorm(nYears)
         fallTmean<-rnorm(nYears)
@@ -83,7 +93,7 @@ for(s in 1:nrow(simControl)){
         springTmean<-rnorm(nYears)
       }
       
-      ## Data generation
+      #set up data structures
       N <- lambda <- p <- array(NA_real_, dim=c(nSites, nYears),
                                 dimnames=list(paste("site",1:nSites), 
                                               paste("year",1:nYears)))
