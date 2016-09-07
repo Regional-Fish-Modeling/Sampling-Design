@@ -11,7 +11,7 @@ library(jagsUI); library(dplyr); library(data.table)
 #grab the simulation number from the environment passed from the slurm call
 simNum<- Sys.getenv('SLURM_ARRAY_TASK_ID') %>% as.numeric()
 
-simControl<-readRDS("simsToDo2.rds") %>%
+simControl<-readRDS("simsToDo4.rds") %>%
   .[simNum==whichSim]
 
 ## Simulation settings
@@ -154,7 +154,7 @@ for(s in 1:nrow(simControl)){
         res$nYears<-nYears
         res$nSites<-nSites
         res$stage<-simControl$stage[s]
-        res$simNum<-paste0("3.",simNum,".",s-1)
+        res$simNum<-paste0("2.",simNum,".",s-1)
         results<-rbind(results,res)
         next
       }
@@ -175,7 +175,7 @@ for(s in 1:nrow(simControl)){
       res$nYears<-nYears
       res$nSites<-nSites
       res$stage<-simControl$stage[s]
-      res$simNum<-paste0(simNum,".",s-1)
+      res$simNum<-paste0("2.",simNum,".",s-1)
       
       #bind with previous simulations
       results<-rbind(results,res)

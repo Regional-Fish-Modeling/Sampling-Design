@@ -9,7 +9,8 @@ res<-readRDS("yetiSims/trendSimResults.rds") %>%
           
 
 setkey(res,nYears,nSites,simNum)
-res[,converged:=all(rHat<1.1),by=.(nSites,nYears,stage,trend,simNum)]
+res[,converged:=all(rHat<1.1),by=simNum]
+res[,covariates:="b1" %in% parameter,by=simNum]
 
 badOnes<-res[parameter=="mu",.(didNotCoverge=sum(!converged[!is.na(converged)])/sum(!is.na(converged)),
                               didNotInitialize=sum(is.na(trueValue))/length(trueValue)),
@@ -21,7 +22,7 @@ res[,diffFromTrue:=q2.5>trueValue|q97.5<trueValue]
 propSig<-res[parameter=="trend",.(propSig95=sum(q97.5<0)/length(q97.5),
                                   propSig90=sum(q95<0)/length(q95),
                                   propSig80=sum(q90<0)/length(q95),
-                                  n=.N),by=.(nYears,nSites,stage,trend)]
+                                  n=.N),by=.(nYears,nSites,stage,trend,covariates)]
 
 cols=c(rgb(1,0,0,0.6),rgb(0,1,0,0.6),rgb(0,0,1,0.6))
 tiff.par("figures/simsSigTrendsAdult.tif",mfrow=c(3,1),height=6,width=3.5)
