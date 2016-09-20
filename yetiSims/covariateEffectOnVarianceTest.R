@@ -1,3 +1,4 @@
+#assign model coefficients
 # for(b in 1:6){
 #   assign(paste0("beta",b),out2$mean$b[b])
 # }
@@ -14,7 +15,10 @@ mu<- 2.8500
 sdNoCov<-NA
 sdCov<-NA
 
+#create the 'true' data to use for fitting the model
 for(i in 1:1000){
+  
+#simulate some covariates  
 fallPrcp<-rnorm(nYears)
 fallTmean<-rnorm(nYears)
 winterPrcp<-rnorm(nYears)
@@ -22,8 +26,10 @@ winterTmean<-rnorm(nYears)
 springPrcp<-rnorm(nYears)
 springTmean<-rnorm(nYears)
 
+#and some random variation
 ranYear<-rnorm(nYears,0,sd.year)
 
+#covariates plus random variation makes the outcome
 y<-mu+
   beta1*fallPrcp+
   beta2*fallTmean+
@@ -33,9 +39,11 @@ y<-mu+
   beta6*springTmean+
   ranYear
 
+#fit the model with or without covariates
 a1<-lm(y~1)
 a2<-lm(y~fallPrcp+fallTmean+winterPrcp+winterTmean+springPrcp+springTmean)
 
+#simulate based on the model fit
 y1<-rnorm(1000,mu,summary(a1)$sigma)
 y2<-coef(a2)[1]+
   coef(a2)[2]*rnorm(1000)+
@@ -50,6 +58,7 @@ sdNoCov[i]<-sd(y1)
 sdCov[i]<-sd(y2)
 }
 
+#look at results
 plot(density(sdNoCov))
 points(density(sdCov),type='l',col="blue")
 
