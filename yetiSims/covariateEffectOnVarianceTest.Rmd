@@ -1,0 +1,160 @@
+---
+title: "The effect of covariates on simulated data"
+author: "Evan Childress"
+date: "September 20, 2016"
+output: html_document
+---
+
+This document contains some simple simulations of linear regressions to explore the ways that covariates influence the variance of simulated data. I noticed in our simulations that the variance of the abundances generated from the covariate model were way bigger than those generated from the no covariate model, so I wanted to explore why that was happening. What I do here is generate some "true" data, use those data to fit linear models with and without covariates, and generate new data with those model fits. Then I evaluate how noisy the generated data from the final step are. This process mirrors what we are doing with the brook trout data, except we actually use the real data for the first step and the model is more complicated than a multiple linear regression. 
+
+
+First, set up sample size and the true parameter values
+```{r}
+nYears<-10
+
+#these are taken from posterior means from the actual models we fit to brook trout
+beta1<-0.1638
+beta2<- -0.3272
+beta3<- -0.3010
+beta4<- 0.0951
+beta5<- -0.2475
+beta6<- 0.1385
+
+mu<- 2.8500
+
+sd.year<-0.41
+```
+
+Simulate data then fit the models and use them to simulate more data
+```{r}
+#structures to hold results
+sdNoCov<-NA
+sdCov<-NA
+
+for(i in 1:1000){
+#create the 'true' data to use for fitting the model
+#simulate some covariates  
+fallPrcp<-rnorm(nYears)
+fallTmean<-rnorm(nYears)
+winterPrcp<-rnorm(nYears)
+winterTmean<-rnorm(nYears)
+springPrcp<-rnorm(nYears)
+springTmean<-rnorm(nYears)
+
+#and some random variation
+ranYear<-rnorm(nYears,0,sd.year)
+
+#intercept + covariate effects + plus random variation makes the outcome
+y<-mu+
+  beta1*fallPrcp+
+  beta2*fallTmean+
+  beta3*winterPrcp+
+  beta4*winterTmean+
+  beta5*springPrcp+
+  beta6*springTmean+
+  ranYear
+
+#fit models to the 'true' data with or without covariates
+a1<-lm(y~1)
+a2<-lm(y~fallPrcp+fallTmean+winterPrcp+winterTmean+springPrcp+springTmean)
+
+#simulate new data based on the model fit (using 1000 years to reduce noise, but the same patterns emerge with 20 or fewer years)
+y1<-rnorm(nYears,mu,summary(a1)$sigma)
+y2<-coef(a2)[1]+
+  coef(a2)[2]*rnorm(1000)+
+  coef(a2)[3]*rnorm(1000)+
+  coef(a2)[4]*rnorm(1000)+
+  coef(a2)[5]*rnorm(1000)+
+  coef(a2)[6]*rnorm(1000)+
+  coef(a2)[7]*rnorm(1000)+
+  rnorm(1000,mu,summary(a2)$sigma)
+  
+sdNoCov[i]<-sd(y1)
+sdCov[i]<-sd(y2)
+}
+```
+```{r,echo=F}
+plot(density(sdNoCov),main="",xlab="Variance of Generated Response Variable")
+points(density(sdCov),type='l',col="blue")
+legend(1,2,c("no covariates","covariates"),lty=1,col=c("black","blue"),bty='n')
+```
+
+```{r}
+mean(sdNoCov)
+mean(sdCov)
+```
+The variance of data simulated from a model fit with covariates is higher than the variance of data simulated from the model fit without covariates. Uh oh. It seems like this may be the source of our problem. I wondered if the discrepancy might be due to sample size, so I did the same thing with nYears==1000:
+```{r}
+nYears<-1000
+
+sdNoCov<-NA
+sdCov<-NA
+
+for(i in 1:1000){
+#create the 'true' data to use for fitting the model
+  
+#simulate some covariates  
+fallPrcp<-rnorm(nYears)
+fallTmean<-rnorm(nYears)
+winterPrcp<-rnorm(nYears)
+winterTmean<-rnorm(nYears)
+springPrcp<-rnorm(nYears)
+springTmean<-rnorm(nYears)
+
+#and some random variation
+ranYear<-rnorm(nYears,0,sd.year)
+
+#covariates plus random variation makes the outcome
+y<-mu+
+  beta1*fallPrcp+
+  beta2*fallTmean+
+  beta3*winterPrcp+
+  beta4*winterTmean+
+  beta5*springPrcp+
+  beta6*springTmean+
+  ranYear
+
+#fit the model to the 'true' data with or without covariates
+a1<-lm(y~1)
+a2<-lm(y~fallPrcp+fallTmean+winterPrcp+winterTmean+springPrcp+springTmean)
+
+#simulate new data based on the model fit
+y1<-rnorm(1000,mu,summary(a1)$sigma)
+y2<-coef(a2)[1]+
+  coef(a2)[2]*rnorm(1000)+
+  coef(a2)[3]*rnorm(1000)+
+  coef(a2)[4]*rnorm(1000)+
+  coef(a2)[5]*rnorm(1000)+
+  coef(a2)[6]*rnorm(1000)+
+  coef(a2)[7]*rnorm(1000)+
+  rnorm(1000,mu,summary(a2)$sigma)
+  
+sdNoCov[i]<-sd(y1)
+sdCov[i]<-sd(y2)
+}
+```
+```{r,echo=F}
+plot(density(sdNoCov),main="",xlab="Variance of Generated Response Variable")
+points(density(sdCov),type='l',col="blue")
+legend(0.85,2.9,c("no covariates","covariates"),lty=1,col=c("black","blue"),bty='n')
+```
+
+```{r}
+mean(sdNoCov)
+mean(sdCov)
+```
+
+Lo and behold the variances are equivalent. My intuition here is that uncertainty in the betas (or divergence from the true values?) is the source of the discrepancy.
+
+In our case, we believe that the true data generating model includes covariates, so generating the data using covariates and then fitting it with or without covariates may be the best route. This gives a more fair comparison because the simulated data would have the same amount of noise ragardless of which model we are fitting to them. The only difference is the way that we fit the data.
+
+The model that includes covariates should have lower residual variation when the covariates are included in the data generation part, as is the case for this linear regression and the YOY models. This should improve trend detection when covariates are included.
+```{r}
+#without covariates
+summary(a1)$sigma
+
+#with covariates
+summary(a2)$sigma
+```
+
+###So I propose using covariates to generate the data in all cases and then fitting the models with or without covariates. 
