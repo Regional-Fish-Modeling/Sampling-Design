@@ -30,6 +30,7 @@ Simulate data then fit the models and use them to simulate more data
 #structures to hold results
 sdNoCov<-NA
 sdCov<-NA
+sdReal<-NA
 
 for(i in 1:1000){
 #create the 'true' data to use for fitting the model
@@ -71,15 +72,21 @@ y2<-coef(a2)[1]+
   
 sdNoCov[i]<-sd(y1)
 sdCov[i]<-sd(y2)
+sdReal[i]<-sd(y)
 }
 ```
 ```{r,echo=F}
-plot(density(sdNoCov),main="",xlab="Variance of Generated Response Variable")
+plot(density(sdReal),type='l',col='red',main="",
+     xlim=range(c(sdReal,sdCov,sdNoCov)),
+     xlab="Variance of Generated Response Variable")
+points(density(sdNoCov),type='l')
 points(density(sdCov),type='l',col="blue")
-legend(1,2,c("no covariates","covariates"),lty=1,col=c("black","blue"),bty='n')
+legend(1.2,1.7,c("no covariates","covariates","original data"),
+       lty=1,col=c("black","blue","red"),bty='n')
 ```
 
 ```{r}
+mean(sdReal)
 mean(sdNoCov)
 mean(sdCov)
 ```
@@ -89,6 +96,7 @@ nYears<-1000
 
 sdNoCov<-NA
 sdCov<-NA
+sdReal<-NA
 
 for(i in 1:1000){
 #create the 'true' data to use for fitting the model
@@ -131,24 +139,32 @@ y2<-coef(a2)[1]+
   
 sdNoCov[i]<-sd(y1)
 sdCov[i]<-sd(y2)
+sdReal[i]<-sd(y)
 }
 ```
 ```{r,echo=F}
-plot(density(sdNoCov),main="",xlab="Variance of Generated Response Variable")
+plot(density(sdReal),type='l',col='red',main="",
+     xlim=range(c(sdReal,sdCov,sdNoCov)),
+     xlab="Variance of Generated Response Variable")
+points(density(sdNoCov),type='l')
 points(density(sdCov),type='l',col="blue")
-legend(0.85,2.9,c("no covariates","covariates"),lty=1,col=c("black","blue"),bty='n')
+
+
+legend(0.73,15,c("no covariates","covariates","original data"),
+       lty=1,col=c("black","blue","red"),bty='n')
 ```
 
 ```{r}
+mean(sdReal)
 mean(sdNoCov)
 mean(sdCov)
 ```
 
 Lo and behold the variances are equivalent. My intuition here is that uncertainty in the betas (or divergence from the true values?) is the source of the discrepancy.
 
-In our case, we believe that the true data generating model includes covariates, so generating the data using covariates and then fitting it with or without covariates may be the best route. This gives a more fair comparison because the simulated data would have the same amount of noise ragardless of which model we are fitting to them. The only difference is the way that we fit the data.
+In our case, we believe that the true data generating model includes covariates, so generating the data using covariates and then fitting it with or without covariates may be the best route. However, the data generated with the covariate model have higher variance than the original data, so we are actually simulating a noisier system than the real system, which will decrease our power to detect the trends.
 
-The model that includes covariates should have lower residual variation when the covariates are included in the data generation part, as is the case for this linear regression and the YOY models. This should improve trend detection when covariates are included.
+When fit to the same data (generated with covariates), the model that includes covariates should have lower residual variation when the covariates are included in the data generation part, as is the case for this linear regression and the YOY model fit to the real data. This should improve trend detection when covariates are included.
 ```{r}
 #without covariates
 summary(a1)$sigma
@@ -156,5 +172,3 @@ summary(a1)$sigma
 #with covariates
 summary(a2)$sigma
 ```
-
-###So I propose using covariates to generate the data in all cases and then fitting the models with or without covariates. 
