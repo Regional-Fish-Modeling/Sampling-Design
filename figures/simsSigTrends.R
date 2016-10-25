@@ -25,28 +25,35 @@ propSig<-res[parameter=="trend",.(propSig95=sum(q97.5<0)/length(q97.5),
                                   n=.N),by=.(nYears,nSites,stage,trend,covariates)]
 
 cols=c(rgb(1,0,0,0.6),rgb(0,1,0,0.6),rgb(0,0,1,0.6))
+
 tiff.par("figures/simsSigTrendsAdult.tif",mfrow=c(3,1),height=6,width=3.5)
-plot(propSig95~trend,pch=16,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"],
+plot(propSig95~trend,pch=16,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"&covariates==T],
      xlab="true trend",ylab="proportion not overlapping 0 (95% CI)",ylim=c(0,1))
+points(propSig95~trend,pch=1,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"&covariates==F])
 legend(-0.015,0.9,c("5","10","20"),col=cols,pch=19,pt.cex=2,title="Years",bty='n')
 legend(-0.02,0.9,c("5","10","50","100"),pt.cex=log(c(5,10,50,100)/2),pch=16,
        col='black',title="Sites",bty='n')
-plot(propSig90~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"],
+plot(propSig90~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"&covariates==T],
      xlab="true trend",ylab="proportion not overlapping 0 (90% CI)",ylim=c(0,1))
-plot(propSig80~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"],
+points(propSig90~trend,pch=1,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"&covariates==F])
+plot(propSig80~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"&covariates==T],
      xlab="true trend",ylab="proportion not overlapping 0 (80% CI)",ylim=c(0,1))
+points(propSig80~trend,pch=1,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="adult"&covariates==F])
 dev.off()
 
 tiff.par("figures/simsSigTrendsYoy.tif",mfrow=c(3,1),height=6,width=3.5)
-plot(propSig95~trend,pch=16,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"],
+plot(propSig95~trend,pch=16,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"&covariates==T],
      xlab="true trend",ylab="proportion not overlapping 0 (95% CI)",ylim=c(0,1))
+points(propSig95~trend,pch=1,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"&covariates==F])
 legend(-0.015,0.9,c("5","10","20"),col=cols,pch=19,pt.cex=2,title="Years",bty='n')
 legend(-0.02,0.9,c("5","10","50","100"),pt.cex=log(c(5,10,50,100)/2),pch=16,
        col='black',title="Sites",bty='n')
-plot(propSig90~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"],
+plot(propSig90~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"&covariates==T],
      xlab="true trend",ylab="proportion not overlapping 0 (90% CI)",ylim=c(0,1))
-plot(propSig80~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"],
+points(propSig90~trend,pch=1,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"&covariates==F])
+plot(propSig80~trend,pch=19,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"&covariates==T],
      xlab="true trend",ylab="proportion not overlapping 0 (80% CI)",ylim=c(0,1))
+points(propSig80~trend,pch=1,col=cols[match(nYears,c(5,10,20))],cex=log(nSites/2),data=propSig[stage=="yoy"&covariates==F])
 dev.off()
 
 

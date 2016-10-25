@@ -3,7 +3,7 @@ library(jagsUI)
 xTrend<-seq(3,5,0.01)
 x<-xTrend+rnorm(length(xTrend),0,1)
 
-y<-x*2+rnorm(length(x),1)
+y<-x*2+rnorm(length(x),1)+xTrend*-1
 
 jagsData<-list(x=x,
                y=y,

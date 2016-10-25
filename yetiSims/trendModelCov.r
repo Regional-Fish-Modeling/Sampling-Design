@@ -23,9 +23,7 @@ model{
   
   for (j in 1:nYears){
     year.ran[j] ~ dnorm(year.hat[j], tau.year)
-    year.hat[j] <- b1*fallPrcp[j] + b2*fallTmean[j] + 
-      b3*winterPrcp[j] + b4*winterTmean[j] +
-      b5*springPrcp[j] + b6*springTmean[j]
+    year.hat[j] <- b1*winterPrcp[j] + b2*springPrcp[j]
   }
   tau.year <- pow(sd.year, -2) 
   sd.year ~ dunif(0,2)

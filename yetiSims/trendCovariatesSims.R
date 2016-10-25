@@ -22,15 +22,15 @@ nPasses <- 3
 
 
 # some MCMC settings
-n.chains = 3  		# number of chains
-n.adapt = 5000		# number of sampler tuning iterations
-n.burnin = 60000 # number of iterations to discard
-n.iter = 65000	  # total iterations
+# n.chains = 3  		# number of chains
+# n.adapt = 5000		# number of sampler tuning iterations
+# n.burnin = 60000 # number of iterations to discard
+# n.iter = 65000	  # total iterations
 
-#n.chains = 3  		# number of chains
-#n.adapt = 5		# number of sampler tuning iterations
-#n.burnin = 10 # number of iterations to discard
-#n.iter = 20	  # total iterations
+n.chains = 3  		# number of chains
+n.adapt = 5		# number of sampler tuning iterations
+n.burnin = 10 # number of iterations to discard
+n.iter = 20	  # total iterations
 
 
 
@@ -44,10 +44,8 @@ for(s in 1:nrow(simControl)){
   # model name
   model = ifelse(includeCovs,"trendModelCov.r","trendModelNoCov.r")
   
-  #load data specific to stage and covariate inclusion
-  load(paste0(simControl$stage[s],
-              ifelse(includeCovs,"Cov","NoCov"),
-              ".RData"))
+  #load data specific to stage (using covariate model to simulate data always)
+  load(paste0(simControl$stage[s],"Cov.RData"))
   
   #get simulation settings from control structure
   nYears<-simControl$nYears[s]
@@ -67,7 +65,7 @@ for(s in 1:nrow(simControl)){
       if(includeCovs){
         #with environmental covariates
 		pars.to.save <- c("mu","trend","sd.site","sd.year","sigma",
-                 "p.mean","p.b","b1","b2","b3","b4","b5","b6")
+                 "p.mean","p.b","b1","b2")
 	} else {
 	  #without environmental covariates
 		pars.to.save <- c("mu","trend","sd.site","sd.year","sigma",
@@ -84,14 +82,8 @@ for(s in 1:nrow(simControl)){
     
       ## Data generation  
       #generate environment
-      if(includeCovs){
-        fallPrcp<-rnorm(nYears)
-        fallTmean<-rnorm(nYears)
-        winterPrcp<-rnorm(nYears)
-        winterTmean<-rnorm(nYears)
-        springPrcp<-rnorm(nYears)
-        springTmean<-rnorm(nYears)
-      }
+      winterPrcp<-rnorm(nYears)
+      springPrcp<-rnorm(nYears)
       
       #set up data structures
       N <- lambda <- p <- array(NA_real_, dim=c(nSites, nYears),
@@ -117,16 +109,10 @@ for(s in 1:nrow(simControl)){
       trend = log(1+r)   # convert to log scale for linear model: Dauwalter et al. (2010)
       
       #change format of environmental covariate betas to facilitate output storage
-      if(simControl$covariates[s]==TRUE){
-        for(bee in 1:6){
-          assign(paste0("b",bee),out.new$b[i,bee])
-        }
-        b = out.new$b[i,] #environmental covariate betas
-      } else {
-        for(bee in 1:6){
-          assign(paste0("b",bee),NA)
-        }
+      for(bee in 1:2){
+        assign(paste0("b",bee),out.new$b[i,bee])
       }
+      b = out.new$b[i,] #environmental covariate betas
       
       ## Parameters for detection
       p.mean = out.new$p.mean[i]    # mean detection prob
@@ -148,14 +134,9 @@ for(s in 1:nrow(simControl)){
       ## stochastic factors affecting abundance
       site.ran = rnorm(nSites, 0, sd.site)    # variation among sites
       
-      if(includeCovs){
-        year.ran = b[1]*fallPrcp + b[2]*fallTmean + #environmental effects
-                   b[3]*winterPrcp + b[4]*winterTmean +
-                   b[5]*springPrcp + b[6]*springTmean +
-                   rnorm(nYears, 0, sd.year)    # random variation among years
-      }else{
-       year.ran = rnorm(nYears,0,sd.year) 
-      }
+      year.ran = b[1]*winterPrcp + b[2]*springPrcp + #environmental effects
+                 rnorm(nYears, 0, sd.year)  # random variation among years
+
       eps = array(rnorm(nSites*nYears, 0, sigma), dim=c(nSites,nYears))  # over-dispersion
       
       ## stochastic factors affecting detection
@@ -181,8 +162,7 @@ for(s in 1:nrow(simControl)){
       ## Bundle data
       if(includeCovs){
         jags.data <- list(nSites=nSites, nYears=nYears, sampday=sampday, y=y,
-        fallPrcp=fallPrcp, fallTmean=fallTmean, winterPrcp=winterPrcp,
-        winterTmean=winterTmean, springPrcp=springPrcp, springTmean=springTmean)
+        winterPrcp=winterPrcp, springPrcp=springPrcp)
       } else{
           jags.data <- list(nSites=nSites, nYears=nYears, sampday=sampday, y=y)              
       }
@@ -235,8 +215,7 @@ for(s in 1:nrow(simControl)){
       saveRDS(results, file=paste0("~/output/sim",simNum,'.rds'))
       
     }
-#   }
-# }
+
 #save to output folder
 saveRDS(results, file=paste0("~/output/sim",simNum,'.rds'))
 cat("simNum: ",simNum) 
