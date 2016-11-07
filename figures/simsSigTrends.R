@@ -5,8 +5,10 @@ library(plotHacks)
 res<-readRDS("yetiSims/trendSimResults.rds") %>%
   data.table() %>%
   setkey(nYears,nSites,simNum) %>%
-  .[,trend:=trueValue[which(parameter=="trend")],by=simNum]
-          
+  .[,trend:=round(trueValue[which(parameter=="trend")],3),by=simNum] %>%
+  .[,stage:=as.character(stage)]
+
+res[,f:=ifelse(Mean<0,f,1-f)] #change f (proportion of posterior with sign of the mean) to prob of negative          
 
 setkey(res,nYears,nSites,simNum)
 res[,converged:=all(rHat<1.1),by=simNum]
@@ -23,6 +25,12 @@ propSig<-res[parameter=="trend",.(propSig95=sum(q97.5<0)/length(q97.5),
                                   propSig90=sum(q95<0)/length(q95),
                                   propSig80=sum(q90<0)/length(q95),
                                   n=.N),by=.(nYears,nSites,stage,trend,covariates)]
+
+# propSig<-res[parameter=="trend",.(propSig95=sum(f>=0.975)/length(q97.5),
+#                                   propSig90=sum(f>=0.95)/length(q95),
+#                                   propSig80=sum(f>=0.9)/length(q95),
+#                                   n=.N),by=.(nYears,nSites,stage,trend,covariates)]
+
 
 cols=c(rgb(1,0,0,0.6),rgb(0,1,0,0.6),rgb(0,0,1,0.6))
 
