@@ -11,7 +11,7 @@ library(data.table)
   names(simsToDo) <- c("nSites","nYears","trend","stage","covariates")
 
 #Replicate for the number of iterations (100)
-  simsToDo<-simsToDo[rep(1:nrow(simsToDo),each=100),]
+  simsToDo<-simsToDo[rep(1:nrow(simsToDo),each=110),]
   simsToDo$whichSim<-rep(1:(nrow(simsToDo)/10),each=10)
   simsToDo<-data.table(simsToDo)
   saveRDS(simsToDo,file="yetiSims/simsToDo.rds")

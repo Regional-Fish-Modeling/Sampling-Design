@@ -48,7 +48,7 @@ model{
       
       p[i,j] <- 1/(1 + exp(-lp.lim[i,j]))
       lp.lim[i,j] <- min(999, max(-999, lp[i,j]))
-      lp[i,j] <- p.mu + p.b*sampday[i,j] 
+      lp[i,j] <- p.mu + p.b*sampday[i,j] + p.site.ran[i]
       # removed "prcp7day" for its small effect
     }
   }
@@ -57,4 +57,11 @@ model{
   p.mean ~ dunif(0.2,0.8)
   p.mu <- log(p.mean/(1-p.mean))
   p.b ~ dnorm(0, 0.37)
+  
+  for(i in 1:nSites){
+    p.site.ran[i] ~ dnorm(0,tau.p.site) 
+  }
+  tau.p.site <- pow(sd.p.site, -2) 
+  sd.p.site ~ dunif(0,1)
+  sd2.p.site <- pow(sd.p.site, 2)
 }

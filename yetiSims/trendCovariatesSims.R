@@ -65,11 +65,11 @@ for(s in 1:nrow(simControl)){
       if(includeCovs){
         #with environmental covariates
 		pars.to.save <- c("mu","trend","sd.site","sd.year","sigma",
-                 "p.mean","p.b","b1","b2")
+                 "p.mean","sd.p.site","p.b","b1","b2")
 	} else {
 	  #without environmental covariates
 		pars.to.save <- c("mu","trend","sd.site","sd.year","sigma",
-                 "p.mean","p.b")
+                 "p.mean","sd.p.site","p.b")
 	}
       #set up results structures
       resultCols<-c('parameter','Mean',paste0("q",quantsToSave*100),'SD','rHat',
@@ -118,14 +118,14 @@ for(s in 1:nrow(simControl)){
       p.mean = out.new$p.mean[i]    # mean detection prob
       p.mu = log(p.mean/(1-p.mean))   # convert to logit scale
       p.b = out.new$p.b[i]          # effect size of a det cov (day of year)
-      #p.sigma = out.new$p.sigma[i]  # variation among sites
+      sd.p.site = out.new$sd.p.site[i] # variation among sites
       
       ### save true values - grabbed using names in pars.to.save
       truePars <- sapply(pars.to.save,get)
       
       #--------------------------------------------------------------------
       ## JAGS set up
-      nInit<-ifelse(simControl$stage[s]=="yoy",5000,1200)
+      nInit<-ifelse(simControl$stage[s]=="yoy",8000,2000)
       init.vals <- function() list(N=array(nInit, dim=c(nSites, nYears)))
       
       #--------------------------------------------------------------------
@@ -141,7 +141,7 @@ for(s in 1:nrow(simControl)){
       
       ## stochastic factors affecting detection
       sampday = array(rnorm(nSites*nYears, 0, 1), dim=c(nSites,nYears)) # standardized cov
-      #p.eps = array(rnorm(nSites*nYears, 0, p.sigma), dim=c(nSites,nYears))  # over-d
+      p.site.ran = rnorm(nSites, 0, sd.p.site)  # site random effect
       
       ## Simulated data in a site-by-year format     
       for(i in 1:nSites){
@@ -151,7 +151,7 @@ for(s in 1:nrow(simControl)){
                                site.ran[i] + year.ran[j] + eps[i,j])
           N[i,j] <- rpois(1,lambda[i,j])
           # observed count  
-          p[i,j] <- plogis(p.mu + p.b*sampday[i,j]) #+ p.eps[i,j])
+          p[i,j] <- plogis(p.mu + p.b*sampday[i,j] + p.site.ran[i])
           y[i,j,1] <- rbinom(1, N[i,j], p[i,j])
           y[i,j,2] <- rbinom(1, N[i,j]-y[i,j,1], p[i,j])
           y[i,j,3] <- rbinom(1, N[i,j]-y[i,j,1]-y[i,j,2], p[i,j])
@@ -188,6 +188,7 @@ for(s in 1:nrow(simControl)){
         res$nYears<-nYears
         res$nSites<-nSites
         res$stage<-simControl$stage[s]
+        res$covariates<-includeCovs
         res$simNum<-paste0("2.",simNum,".",s-1)
         results<-rbind(results,res)
         next
@@ -212,10 +213,10 @@ for(s in 1:nrow(simControl)){
       results<-rbind(results,res)
 
       #save to output folder
-      saveRDS(results, file=paste0("~/output/sim",simNum,'.rds'))
+      saveRDS(results, file=paste0("~/output/sim2.",simNum,'.rds'))
       
     }
 
 #save to output folder
-saveRDS(results, file=paste0("~/output/sim",simNum,'.rds'))
+saveRDS(results, file=paste0("~/output/sim2.",simNum,'.rds'))
 cat("simNum: ",simNum) 
