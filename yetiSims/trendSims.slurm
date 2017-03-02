@@ -7,7 +7,7 @@
 #SBATCH -n 1
 #SBATCH -c 3
 #SBATCH -t 7-00:00:00
-#SBATCH --array=1-1440
+#SBATCH --array=1-2
 #SBATCH --mail-user=echildress@usgs.gov
 #SBATCH --mail-type=BEGIN,END,FAIL
 
